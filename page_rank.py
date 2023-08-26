@@ -7,7 +7,7 @@ def calculate_page_ranks(sc: SparkContext,
                          text_file: str,
                          option: int = 1,
                          beta: float = 0.85,
-                         tol: float = 1e-4,
+                         tolerance: float = 1e-4,
                          iterations: int = 100,
                          verbose=False):
     """
@@ -17,14 +17,15 @@ def calculate_page_ranks(sc: SparkContext,
         file containing lines with space separated ids (representing pages and
         link from first id to second)
     option: int
-        -> 1 => terminate if change in page ranks below tolerance 'tol' passed
+        -> 1 => terminate if change in page ranks below 'tolerance' tolerance 
+                passed
         -> 2 => run for 'iterations' iterations
         -> Any other value => ignore algorithm
         default = 1
     beta: float
         1 - beta represents teleportation factor
         default = 0.85
-    tol: float
+    tolerance: float
         tolerance to be checked to terminate iterations for option = 1
         default = 1e-4
     iterations: int
@@ -52,17 +53,18 @@ def calculate_page_ranks(sc: SparkContext,
     out_degrees = link_list. \
                   map(lambda page: (page[0], 1)). \
                   reduceByKey(lambda x, y: x+y)
-    transition_matrix = link_list.join(out_degrees). \
+    transition_matrix = link_list. \
+                        join(out_degrees, num_partitions). \
                         map(lambda x: (x[0], (x[1][0], 1/x[1][1]))). \
-                        coalesce(num_partitions). \
                         cache()
     iteration = 0
     if option == 2:
         for _ in range(iterations):
             new_distribution_vector = \
-            matrix_vector_multiplication(transition_matrix, distribution_vector)
+            matrix_vector_multiplication(transition_matrix, 
+                                         distribution_vector,
+                                         num_partitions)
             new_distribution_vector = new_distribution_vector. \
-                                      coalesce(num_partitions). \
                                       mapValues(lambda prob:
                                                 beta * prob +
                                                 (1 - beta) / num_pages)
@@ -73,18 +75,20 @@ def calculate_page_ranks(sc: SparkContext,
     elif option == 1:
         while True:
             new_distribution_vector = \
-            matrix_vector_multiplication(transition_matrix, distribution_vector)
+            matrix_vector_multiplication(transition_matrix, 
+                                         distribution_vector,
+                                         num_partitions)
             new_distribution_vector = new_distribution_vector. \
                                       mapValues(lambda prob:
                                                 beta * prob +
                                                 (1 - beta) / num_pages)
-            dist = vector_distance(new_distribution_vector, distribution_vector)
-            distribution_vector = new_distribution_vector. \
-                                  coalesce(num_partitions)
+            distance = vector_distance(new_distribution_vector, 
+                                       distribution_vector)
+            distribution_vector = new_distribution_vector
             if verbose:
                 print(f'Completed iteration: {iteration}',
                       f'Norm of change: {dist}')
-            if dist < tol:
+            if distance < tol:
                 break
             iteration += 1
     return distribution_vector
