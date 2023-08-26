@@ -9,7 +9,6 @@ def vector_distance(vector1: RDD, vector2: RDD):
         v1_j := (j, v1_j) where v1 is vector1 and j is row idx
     vector2: pyspark.RDD
         v2_j := (j, v2_j) where v2 is vector2 and j is row idx
-
     Returns
     -------
     distance: float
@@ -21,7 +20,9 @@ def vector_distance(vector1: RDD, vector2: RDD):
                sum()**0.5
     return distance
 
-def matrix_vector_multiplication(matrix: RDD, vector: RDD):
+def matrix_vector_multiplication(matrix: RDD, 
+                                 vector: RDD, 
+                                 num_partitions: int = None):
     """
     Parameters
     ----------
@@ -29,7 +30,8 @@ def matrix_vector_multiplication(matrix: RDD, vector: RDD):
         M_ij := (j, (i, M_ij)) where M is matrix and i, j is row, column idx
     vector: pyspark.RDD
         v_j := (j, v_j) where v is vector and j is row idx
-
+    num_partitions: int
+        number of partitions in the new rdd
     Returns
     -------
     result_vector: pyspark.RDD
@@ -37,7 +39,7 @@ def matrix_vector_multiplication(matrix: RDD, vector: RDD):
     """
     # matrix.join(vector) -> (j, ((i, M_ij), v_j))
     result_vector = matrix. \
-                    join(vector). \
+                    join(vector, num_partitions). \
                     map(lambda x: (x[1][0][0], x[1][0][1] * x[1][1])). \
                     reduceByKey(lambda x, y: x + y)
     return result_vector
