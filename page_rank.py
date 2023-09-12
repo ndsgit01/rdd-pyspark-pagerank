@@ -8,7 +8,7 @@ def calculate_page_ranks(sc: SparkContext,
                          option: int = 1,
                          beta: float = 0.85,
                          tolerance: float = 1e-4,
-                         iterations: int = 100,
+                         iterations: int = 25,
                          verbose=False):
     """
     Parameters
@@ -30,7 +30,7 @@ def calculate_page_ranks(sc: SparkContext,
         default = 1e-4
     iterations: int
         no. of iterations to run the algorithm for
-        default = 15
+        default = 25
 
     Returns
     -------
@@ -87,8 +87,8 @@ def calculate_page_ranks(sc: SparkContext,
             distribution_vector = new_distribution_vector
             if verbose:
                 print(f'Completed iteration: {iteration}',
-                      f'Norm of change: {dist}')
-            if distance < tol:
+                      f'Norm of change: {distance}')
+            if distance < tolerance:
                 break
             iteration += 1
     return distribution_vector
